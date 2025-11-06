@@ -5,7 +5,7 @@ import time
 import threading
 from queue import Queue, Empty
 from typing import List, Dict, Optional, Callable
-from datetime import datetime
+from datetime import datetime, timezone
 import logging
 
 from .base_detector import BaseDetector
@@ -95,7 +95,7 @@ class MultiModalRecognitionSystem:
             # 2. 細部辨識
             for detection in detections:
                 result = {
-                    'timestamp': datetime.now().isoformat(),
+                    'timestamp': datetime.now(timezone.utc).astimezone().isoformat(),
                     'base_detection': detection,
                     'details': {}
                 }

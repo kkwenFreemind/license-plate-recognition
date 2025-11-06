@@ -3,7 +3,7 @@
 import psycopg2
 from psycopg2 import pool
 from typing import Dict, List, Optional
-from datetime import datetime
+from datetime import datetime, timezone
 import json
 import logging
 
@@ -303,7 +303,9 @@ class DatabaseHandler:
             bbox = intrusion_data.get('bbox', [None, None, None, None])
             timestamp = intrusion_data.get('timestamp')
             if isinstance(timestamp, str):
-                timestamp = datetime.fromisoformat(timestamp.replace('Z', '+00:00'))
+                timestamp = datetime.fromisoformat(timestamp)
+            elif timestamp is None:
+                timestamp = datetime.now(timezone.utc).astimezone()
             
             cursor.execute("""
                 INSERT INTO fence_intrusions 
@@ -324,7 +326,7 @@ class DatabaseHandler:
                 intrusion_data.get('camera_id'),
                 intrusion_data.get('camera_name'),
                 intrusion_data.get('snapshot_base64'),
-                timestamp or datetime.now()
+                timestamp
             ))
             
             intrusion_id = cursor.fetchone()[0]

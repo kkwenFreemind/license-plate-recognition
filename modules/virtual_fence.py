@@ -2,7 +2,7 @@
 
 import cv2
 import numpy as np
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List, Tuple, Dict, Any
 import time
 
@@ -127,7 +127,7 @@ class VirtualFence:
                     'object_class': obj_class,
                     'confidence': confidence,
                     'bbox': bbox,
-                    'timestamp': datetime.now().isoformat(),
+                    'timestamp': datetime.now(timezone.utc).astimezone().isoformat(),
                     'event_type': 'intrusion',
                     'dwell_time': 0.0
                 }
@@ -174,7 +174,7 @@ class VirtualFence:
                         'confidence': confidence,
                         'bbox': bbox,
                         'track_id': track_id,
-                        'timestamp': datetime.now().isoformat(),
+                        'timestamp': datetime.now(timezone.utc).astimezone().isoformat(),
                         'event_type': 'intrusion',
                         'dwell_time': obj_state['dwell_time'],
                         'dwell_time_threshold': self.dwell_time_threshold
