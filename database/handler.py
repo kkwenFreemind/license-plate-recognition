@@ -56,13 +56,14 @@ class DatabaseHandler:
         if self.pool and conn:
             self.pool.putconn(conn)
     
-    def save_detection(self, camera_id: str, results: List[Dict]) -> bool:
+    def save_detection(self, camera_id: str, results: List[Dict], frame=None) -> bool:
         """
         儲存偵測結果到資料庫
         
         Args:
             camera_id: 攝影機 ID
             results: 辨識結果列表
+            frame: 原始影像幀（用於截取車輛局部畫面）
         
         Returns:
             bool: 是否成功
@@ -100,19 +101,47 @@ class DatabaseHandler:
                 if 'license_plate' in details:
                     plate_info = details['license_plate']
                     if 'plate_number' in plate_info:
+                        # 截取車輛局部畫面並轉為 base64
+                        vehicle_snapshot_base64 = None
+                        if frame is not None:
+                            import cv2
+                            import base64
+                            
+                            bbox = detection['bbox']
+                            x1, y1, x2, y2 = map(int, bbox)
+                            
+                            # 擴展邊界框以包含更多車輛細節（增加 10%）
+                            h, w = frame.shape[:2]
+                            margin_x = int((x2 - x1) * 0.1)
+                            margin_y = int((y2 - y1) * 0.1)
+                            
+                            x1 = max(0, x1 - margin_x)
+                            y1 = max(0, y1 - margin_y)
+                            x2 = min(w, x2 + margin_x)
+                            y2 = min(h, y2 + margin_y)
+                            
+                            # 截取車輛區域
+                            vehicle_crop = frame[y1:y2, x1:x2]
+                            
+                            # 轉為 JPEG 並編碼為 base64
+                            _, buffer = cv2.imencode('.jpg', vehicle_crop, [cv2.IMWRITE_JPEG_QUALITY, 85])
+                            vehicle_snapshot_base64 = base64.b64encode(buffer).decode('utf-8')
+                        
                         cursor.execute("""
                             INSERT INTO plate_records 
-                            (detection_id, plate_number, is_valid, confidence, first_seen_date)
-                            VALUES (%s, %s, %s, %s, CURRENT_DATE)
+                            (detection_id, plate_number, is_valid, confidence, first_seen_date, snapshot_base64)
+                            VALUES (%s, %s, %s, %s, CURRENT_DATE, %s)
                             ON CONFLICT (plate_number, first_seen_date)
                             DO UPDATE SET
                                 last_seen = CURRENT_TIMESTAMP,
-                                count = plate_records.count + 1
+                                count = plate_records.count + 1,
+                                snapshot_base64 = COALESCE(EXCLUDED.snapshot_base64, plate_records.snapshot_base64)
                         """, (
                             detection_id,
                             plate_info['plate_number'],
                             plate_info.get('is_valid', True),
-                            plate_info.get('confidence', 0)
+                            plate_info.get('confidence', 0),
+                            vehicle_snapshot_base64
                         ))
             
             conn.commit()

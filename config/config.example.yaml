@@ -38,6 +38,10 @@ modules:
     ocr_languages: ["en", "ch_tra"]
     gpu: false
     multi_zone_search: true
+    # 車輛區域最小尺寸要求（像素）
+    # 降低這些值可以辨識更遠/更小的車輛，但可能增加誤判
+    min_vehicle_width: 150   # 最小寬度（預設 150，原本 200）
+    min_vehicle_height: 100  # 最小高度（預設 100，原本 150）
     
   face_recognition:
     enabled: false

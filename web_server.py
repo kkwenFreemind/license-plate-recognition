@@ -191,10 +191,10 @@ def process_camera():
             
             latest_frame = annotated_frame
             
-            # 發送辨識結果到前端
+            # 發送辨識結果到前端（傳遞原始影像用於截取車輛）
             if results:
                 logger.info(f"發送 {len(results)} 個偵測結果到前端")
-                send_detection_results(camera_id, results)
+                send_detection_results(camera_id, results, frame)
             else:
                 logger.warning("沒有偵測到任何物件")
             
@@ -247,12 +247,13 @@ def draw_detections(frame, results):
     return frame
 
 
-def send_detection_results(camera_id, results):
+def send_detection_results(camera_id, results, frame=None):
     """發送辨識結果到前端 - 顯示所有物件偵測"""
     # 先寫入資料庫（與 main.py 邏輯一致）
+    # 傳遞原始影像幀以便截取車輛局部畫面
     if db_handler and results:
         try:
-            db_handler.save_detection(camera_id, results)
+            db_handler.save_detection(camera_id, results, frame)
             logger.debug(f"已寫入 {len(results)} 筆資料到資料庫")
         except Exception as e:
             logger.error(f"寫入資料庫失敗: {e}")

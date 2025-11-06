@@ -32,6 +32,8 @@ modules:
     - ch_tra
     gpu: true
     multi_zone_search: true
+    min_vehicle_width: 150
+    min_vehicle_height: 100
   face_recognition:
     enabled: false
     tolerance: 0.6
@@ -40,22 +42,21 @@ virtual_fences:
   enabled: true
   fences:
   - id: fence_001
-    name: Personnel-restricted area
+    name: 人員禁入區
     points:
-    - - 785
-      - 453
-    - - 314
-      - 809
-    - - 1662
-      - 773
-    - - 1442
-      - 476
-    - - 791
-      - 453
+    - - 586
+      - 276
+    - - 189
+      - 538
+    - - 1136
+      - 522
+    - - 923
+      - 262
+    - - 590
+      - 275
     target_classes:
     - person
     min_confidence: 0.6
-    dwell_time_threshold: 3.0  # 新增：停留 3 秒才觸發警報
     enabled: true
 performance:
   enable_monitoring: true

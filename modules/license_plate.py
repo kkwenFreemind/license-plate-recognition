@@ -28,6 +28,10 @@ class LicensePlateRecognizer(DetailRecognizer):
         self.languages = config.get('ocr_languages', ['en', 'ch_tra'])
         self.gpu = config.get('gpu', False)
         self.multi_zone = config.get('multi_zone_search', True)
+        
+        # 車輛區域最小尺寸要求（可配置）
+        self.min_vehicle_width = config.get('min_vehicle_width', 150)
+        self.min_vehicle_height = config.get('min_vehicle_height', 100)
     
     @property
     def name(self) -> str:
@@ -231,12 +235,12 @@ class LicensePlateRecognizer(DetailRecognizer):
         
         height, width = vehicle_region.shape[:2]
         
-        # 過濾太小的車輛區域（至少要 200x150 才能辨識車牌）
-        if width < 200 or height < 150:
+        # 過濾太小的車輛區域（使用可配置的閾值）
+        if width < self.min_vehicle_width or height < self.min_vehicle_height:
             if self.logger:
                 self.logger.debug(
                     f"車輛區域太小: {width}x{height} "
-                    f"(需要至少 200x150)"
+                    f"(需要至少 {self.min_vehicle_width}x{self.min_vehicle_height})"
                 )
             return None
         
