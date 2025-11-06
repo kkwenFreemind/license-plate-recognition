@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>電子圍籬監控系統 - 即時展示</title>
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Microsoft JhengHei', 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        header {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        h1 {
+            color: #667eea;
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+
+        .status {
+            display: inline-block;
+            padding: 5px 15px;
+            background: #10b981;
+            color: white;
+            border-radius: 20px;
+            font-size: 14px;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 20px;
+        }
+
+        .video-section {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .video-section h2 {
+            color: #667eea;
+            margin-bottom: 15px;
+            font-size: 20px;
+        }
+
+        #video-stream {
+            width: 100%;
+            height: auto;
+            border-radius: 8px;
+            background: #000;
+        }
+
+        .intrusions-section {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            max-height: 800px;
+            overflow-y: auto;
+        }
+
+        .intrusions-section h2 {
+            color: #ff4757;
+            margin-bottom: 15px;
+            font-size: 20px;
+            position: sticky;
+            top: 0;
+            background: white;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #ff4757;
+        }
+
+        .intrusion-card {
+            background: linear-gradient(135deg, #ff6b6b 0%, #c92a2a 100%);
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            animation: slideIn 0.3s ease-out;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .intrusion-card:hover {
+            transform: translateX(-5px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(20px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        .intrusion-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .intrusion-title {
+            font-size: 16px;
+            font-weight: bold;
+        }
+
+        .intrusion-time {
+            font-size: 12px;
+            opacity: 0.9;
+        }
+
+        .intrusion-details {
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .intrusion-details strong {
+            display: inline-block;
+            min-width: 80px;
+        }
+
+        .intrusion-thumbnail {
+            width: 100%;
+            border-radius: 4px;
+            margin-top: 10px;
+            display: none;
+        }
+
+        .intrusion-card.expanded .intrusion-thumbnail {
+            display: block;
+        }
+
+        .no-intrusions {
+            text-align: center;
+            color: #999;
+            padding: 40px;
+            font-style: italic;
+        }
+
+        .stats-bar {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 36px;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .stat-label {
+            font-size: 14px;
+            color: #666;
+            margin-top: 5px;
+        }
+
+        .stat-card.danger {
+            background: linear-gradient(135deg, #ff6b6b 0%, #c92a2a 100%);
+        }
+
+        .stat-card.danger .stat-value {
+            color: white;
+        }
+
+        .stat-card.danger .stat-label {
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        /* 捲軸美化 */
+        .intrusions-section::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .intrusions-section::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+
+        .intrusions-section::-webkit-scrollbar-thumb {
+            background: #ff4757;
+            border-radius: 10px;
+        }
+
+        .intrusions-section::-webkit-scrollbar-thumb:hover {
+            background: #c92a2a;
+        }
+
+        /* 警報通知樣式 */
+        .alert-notification {
+            background: linear-gradient(135deg, #ff6b6b 0%, #c92a2a 100%);
+            color: white;
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            animation: slideInRight 0.3s ease-out;
+            position: relative;
+        }
+
+        @keyframes slideInRight {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        .alert-notification.fade-out {
+            animation: fadeOut 0.5s ease-out forwards;
+        }
+
+        @keyframes fadeOut {
+            to {
+                opacity: 0;
+                transform: translateX(400px);
+            }
+        }
+
+        .alert-title {
+            font-size: 16px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .alert-content {
+            font-size: 14px;
+            opacity: 0.95;
+        }
+
+        /* 圖片預覽模態框 */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 10000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.9);
+        }
+
+        .modal-content {
+            margin: auto;
+            display: block;
+            max-width: 90%;
+            max-height: 90%;
+            position: relative;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+
+        .close {
+            position: absolute;
+            top: 20px;
+            right: 35px;
+            color: #f1f1f1;
+            font-size: 40px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .close:hover {
+            color: #ff4757;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🚨 電子圍籬監控系統 - 即時展示</h1>
+            <span class="status" id="connection-status">● 連接中...</span>
+        </header>
+
+        <div class="stats-bar">
+            <div class="stat-card">
+                <div class="stat-value" id="total-detections">0</div>
+                <div class="stat-label">總偵測數</div>
+            </div>
+            <div class="stat-card danger">
+                <div class="stat-value" id="fence-intrusions">0</div>
+                <div class="stat-label">🚨 圍籬入侵事件</div>
+            </div>
+        </div>
+
+        <!-- 警報通知區 -->
+        <div id="alert-container" style="position: fixed; top: 20px; right: 20px; z-index: 9999; max-width: 400px;"></div>
+
+        <div class="main-content">
+            <div class="video-section">
+                <h2>📹 即時影像串流</h2>
+                <img id="video-stream" src="{{ url_for('video_feed') }}" alt="影像串流">
+            </div>
+
+            <div class="intrusions-section">
+                <h2>🚨 圍籬入侵事件記錄</h2>
+                <div id="intrusions-container">
+                    <div class="no-intrusions">等待入侵事件...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 圖片預覽模態框 -->
+    <div id="imageModal" class="modal">
+        <span class="close">&times;</span>
+        <img class="modal-content" id="modalImage">
+    </div>
+
+    <script>
+        // 連接 WebSocket
+        console.log('🚀 初始化 Socket.IO...');
+        const socket = io('/detections', {
+            transports: ['websocket', 'polling'],
+            reconnection: true,
+            reconnectionDelay: 1000,
+            reconnectionAttempts: 5
+        });
+
+        let totalDetections = 0;
+        let fenceIntrusions = 0;
+
+        // 物件類型對應的 Emoji
+        const objectEmojis = {
+            'car': '🚗',
+            'truck': '🚚',
+            'bus': '🚌',
+            'motorcycle': '🏍️',
+            'person': '🚶',
+            'bicycle': '🚴',
+            'traffic light': '🚦',
+            'default': '📦'
+        };
+
+        // 中文翻譯
+        const objectNames = {
+            'car': '汽車',
+            'truck': '卡車',
+            'bus': '公車',
+            'motorcycle': '機車',
+            'person': '行人',
+            'bicycle': '腳踏車',
+            'traffic light': '交通號誌'
+        };
+
+        socket.on('connect', function() {
+            console.log('✅ WebSocket 已連接！');
+            document.getElementById('connection-status').textContent = '● 已連接';
+            document.getElementById('connection-status').style.background = '#10b981';
+
+            // 載入歷史入侵記錄
+            loadHistoricalIntrusions();
+        });
+
+        socket.on('disconnect', function(reason) {
+            console.log('❌ WebSocket 已斷開，原因:', reason);
+            document.getElementById('connection-status').textContent = '● 已斷開';
+            document.getElementById('connection-status').style.background = '#ef4444';
+        });
+
+        socket.on('new_detection', function(data) {
+            console.log('🎯 收到新偵測資料:', data);
+            totalDetections++;
+            document.getElementById('total-detections').textContent = totalDetections;
+        });
+
+        socket.on('fence_intrusion', function(data) {
+            console.log('🚨 電子圍籬警報:', data);
+
+            // 更新警報計數
+            fenceIntrusions++;
+            document.getElementById('fence-intrusions').textContent = fenceIntrusions;
+
+            // 顯示警報通知
+            showAlert(data);
+
+            // 添加到入侵記錄列表
+            addIntrusionCard(data);
+        });
+
+        function showAlert(data) {
+            const container = document.getElementById('alert-container');
+            const alert = document.createElement('div');
+            alert.className = 'alert-notification';
+
+            const objectName = objectNames[data.object_class] || data.object_class;
+            const objectEmoji = objectEmojis[data.object_class] || objectEmojis['default'];
+            const time = new Date(data.timestamp).toLocaleTimeString('zh-TW');
+
+            alert.innerHTML = `
+                <div class="alert-title">🚨 電子圍籬警報</div>
+                <div class="alert-content">
+                    ${objectEmoji} <strong>${objectName}</strong> 進入 <strong>${data.fence_name}</strong><br>
+                    信心度: ${(data.confidence * 100).toFixed(1)}% | ${time}
+                </div>
+            `;
+
+            container.appendChild(alert);
+
+            // 播放警報音效（可選）
+            try {
+                const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBSuBzvLZizcIHGi77eiYUA0PUKXi8bllHAU2kdry0H4sBSR3yPDckUELFF+06O2nVRQLRqDg8LxrIAMseM3z2Yw6CRlovO7qkFAODlGm4/K6Zh0FN5LZ89CALQQkecnx3ZFCDBF');
+                audio.volume = 0.3;
+                audio.play();
+            } catch (e) {
+                console.log('無法播放警報音效');
+            }
+
+            // 5 秒後移除通知
+            setTimeout(() => {
+                alert.classList.add('fade-out');
+                setTimeout(() => alert.remove(), 500);
+            }, 5000);
+        }
+
+        function addIntrusionCard(data) {
+            const container = document.getElementById('intrusions-container');
+
+            // 移除 "等待入侵事件..." 訊息
+            const noIntrusions = container.querySelector('.no-intrusions');
+            if (noIntrusions) {
+                noIntrusions.remove();
+            }
+
+            // 建立新的入侵卡片
+            const card = document.createElement('div');
+            card.className = 'intrusion-card';
+
+            const objectName = objectNames[data.object_class] || data.object_class;
+            const objectEmoji = objectEmojis[data.object_class] || objectEmojis['default'];
+            const timestamp = new Date(data.timestamp).toLocaleString('zh-TW');
+            const confidence = (data.confidence * 100).toFixed(1);
+
+            card.innerHTML = `
+                <div class="intrusion-header">
+                    <div class="intrusion-title">
+                        🚨 ${data.fence_name}
+                    </div>
+                    <div class="intrusion-time">${timestamp}</div>
+                </div>
+                <div class="intrusion-details">
+                    <div>${objectEmoji} <strong>物件:</strong> ${objectName}</div>
+                    <div>📊 <strong>信心度:</strong> ${confidence}%</div>
+                    <div>📷 <strong>攝影機:</strong> ${data.camera_name || '未命名'}</div>
+                </div>
+                ${data.snapshot_base64 ? `<img class="intrusion-thumbnail" src="data:image/jpeg;base64,${data.snapshot_base64}" alt="入侵截圖">` : ''}
+            `;
+
+            // 點擊卡片展開/收合
+            card.addEventListener('click', function() {
+                this.classList.toggle('expanded');
+                if (this.classList.contains('expanded') && data.snapshot_base64) {
+                    // 顯示大圖
+                    showImageModal(data.snapshot_base64);
+                }
+            });
+
+            // 插入到最上方
+            container.insertBefore(card, container.firstChild);
+
+            // 限制最多顯示 50 筆記錄
+            const cards = container.querySelectorAll('.intrusion-card');
+            if (cards.length > 50) {
+                cards[cards.length - 1].remove();
+            }
+        }
+
+        function loadHistoricalIntrusions() {
+            // 載入歷史入侵記錄
+            fetch('/api/fence_intrusions?limit=20')
+                .then(response => response.json())
+                .then(result => {
+                    if (result.success && result.data.length > 0) {
+                        console.log(`載入 ${result.data.length} 筆歷史入侵記錄`);
+                        fenceIntrusions = result.count;
+                        document.getElementById('fence-intrusions').textContent = fenceIntrusions;
+
+                        // 反向顯示（最新的在最上面）
+                        result.data.reverse().forEach(intrusion => {
+                            addIntrusionCard(intrusion);
+                        });
+                    }
+                })
+                .catch(error => {
+                    console.error('載入歷史記錄失敗:', error);
+                });
+        }
+
+        function showImageModal(base64Image) {
+            const modal = document.getElementById('imageModal');
+            const modalImg = document.getElementById('modalImage');
+
+            modal.style.display = 'block';
+            modalImg.src = 'data:image/jpeg;base64,' + base64Image;
+
+            // 點擊關閉按鈕
+            document.querySelector('.close').onclick = function() {
+                modal.style.display = 'none';
+            };
+
+            // 點擊模態框外部關閉
+            modal.onclick = function(event) {
+                if (event.target === modal) {
+                    modal.style.display = 'none';
+                }
+            };
+        }
+
+        // 定期更新統計資料
+        setInterval(function() {
+            fetch('/api/stats')
+                .then(response => response.json())
+                .then(data => {
+                    // 可以從後端獲取更精確的統計
+                })
+                .catch(error => console.error('獲取統計失敗:', error));
+        }, 5000);
+    </script>
+</body>
+</html>

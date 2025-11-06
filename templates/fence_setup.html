@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>電子圍籬設定工具</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Microsoft JhengHei', 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        header {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        h1 {
+            color: #667eea;
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 20px;
+        }
+
+        .canvas-section {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .canvas-section h2 {
+            color: #667eea;
+            margin-bottom: 15px;
+            font-size: 20px;
+        }
+
+        .canvas-wrapper {
+            position: relative;
+            display: inline-block;
+            border: 3px solid #667eea;
+            border-radius: 8px;
+            overflow: hidden;
+            cursor: crosshair;
+        }
+
+        #fenceCanvas {
+            display: block;
+            max-width: 100%;
+        }
+
+        .control-panel {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .section {
+            margin-bottom: 25px;
+        }
+
+        .section h3 {
+            color: #667eea;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        .instructions {
+            background: #f8f9ff;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+
+        .instructions p {
+            color: #333;
+            line-height: 1.8;
+            margin-bottom: 8px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            color: #333;
+            margin-bottom: 5px;
+            font-weight: 500;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .form-group small {
+            color: #666;
+            font-size: 12px;
+        }
+
+        .button-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .btn {
+            padding: 12px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-transform: uppercase;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: #f0f0f0;
+            color: #333;
+        }
+
+        .btn-secondary:hover {
+            background: #e0e0e0;
+        }
+
+        .btn-danger {
+            background: #ff4757;
+            color: white;
+            grid-column: span 2;
+        }
+
+        .btn-danger:hover {
+            background: #ff3838;
+        }
+
+        .btn-success {
+            background: #2ecc71;
+            color: white;
+            grid-column: span 2;
+        }
+
+        .btn-success:hover {
+            background: #27ae60;
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .stats {
+            background: #f8f9ff;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .stats h4 {
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+
+        .stats p {
+            font-size: 24px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .alert {
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+            display: none;
+        }
+
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .alert-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .alert-warning {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeeba;
+        }
+
+        .alert-info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .image-info {
+            background: #f8f9ff;
+            padding: 10px;
+            border-radius: 6px;
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🎯 電子圍籬設定工具</h1>
+            <p class="subtitle">在即時影像上點擊選擇圍籬區域，系統會自動更新配置檔案</p>
+        </header>
+
+        <div class="main-content">
+            <div class="canvas-section">
+                <h2>📹 即時影像 - 點擊選擇圍籬區域</h2>
+                <div class="image-info" id="imageInfo">
+                    載入中...
+                </div>
+                <div id="canvasContainer">
+                    <div class="loading">
+                        <div class="spinner"></div>
+                        <p>正在載入即時影像...</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="control-panel">
+                <div class="section">
+                    <h3>📋 操作說明</h3>
+                    <div class="instructions">
+                        <p>🖱️ <strong>左鍵點擊</strong>：選取多邊形頂點（至少 3 個點）</p>
+                        <p>✅ <strong>右鍵點擊</strong>：完成選取</p>
+                        <p>🔄 <strong>重置按鈕</strong>：清除所有點，重新選擇</p>
+                        <p>💾 <strong>儲存按鈕</strong>：將圍籬配置寫入設定檔</p>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <div class="stats">
+                        <h4>已選取點數</h4>
+                        <p id="pointCount">0</p>
+                    </div>
+                </div>
+
+                <div class="alert" id="alertBox"></div>
+
+                <div class="section">
+                    <h3>⚙️ 圍籬設定</h3>
+                    <div class="form-group">
+                        <label for="fenceId">圍籬 ID *</label>
+                        <input type="text" id="fenceId" placeholder="例如: fence_001" value="fence_001" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="fenceName">圍籬名稱 *</label>
+                        <input type="text" id="fenceName" placeholder="例如: 人員禁入區" value="人員禁入區" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="targetClasses">目標類型</label>
+                        <input type="text" id="targetClasses" placeholder="例如: person,car (用逗號分隔)" value="person">
+                        <small>留空表示偵測所有類型</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="minConfidence">最小信心度 (0.0-1.0)</label>
+                        <input type="number" id="minConfidence" min="0" max="1" step="0.1" value="0.6">
+                    </div>
+                </div>
+
+                <div class="button-group">
+                    <button class="btn btn-secondary" onclick="resetPoints()">🔄 重置</button>
+                    <button class="btn btn-primary" onclick="completeSelection()">✅ 完成</button>
+                    <button class="btn btn-success" onclick="saveFence()" id="saveBtn" disabled>💾 儲存配置</button>
+                </div>
+
+                <div style="margin-top: 15px;">
+                    <a href="/fence" style="display: block; text-align: center; padding: 10px; background: #f0f0f0; border-radius: 6px; text-decoration: none; color: #333;">
+                        ← 返回監控頁面
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let canvas = null;
+        let ctx = null;
+        let points = [];
+        let completed = false;
+        let imageData = null;
+        let originalImage = null;
+        let scale = 1;
+
+        // 載入即時影像
+        function loadCurrentFrame() {
+            fetch('/api/current_frame')
+                .then(response => response.json())
+                .then(data => {
+                    if (!data.success) {
+                        showAlert('無法載入影像: ' + data.error, 'error');
+                        setTimeout(loadCurrentFrame, 2000); // 2 秒後重試
+                        return;
+                    }
+
+                    const img = new Image();
+                    img.onload = function() {
+                        // 創建 canvas
+                        const container = document.getElementById('canvasContainer');
+                        container.innerHTML = '<canvas id="fenceCanvas"></canvas>';
+                        canvas = document.getElementById('fenceCanvas');
+                        ctx = canvas.getContext('2d');
+
+                        // 計算縮放比例（最大寬度 900px）
+                        const maxWidth = 900;
+                        scale = Math.min(1, maxWidth / img.width);
+                        canvas.width = img.width * scale;
+                        canvas.height = img.height * scale;
+
+                        // 繪製影像
+                        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                        imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                        originalImage = img;
+
+                        // 顯示影像資訊
+                        document.getElementById('imageInfo').textContent = 
+                            `影像尺寸: ${data.width} x ${data.height} | 顯示尺寸: ${canvas.width} x ${canvas.height} | 縮放比例: ${(scale * 100).toFixed(1)}%`;
+
+                        // 綁定滑鼠事件
+                        canvas.addEventListener('click', handleClick);
+                        canvas.addEventListener('contextmenu', handleRightClick);
+                        canvas.addEventListener('mousemove', handleMouseMove);
+
+                        showAlert('✓ 影像載入成功，請開始選取圍籬區域', 'success');
+                    };
+                    img.src = 'data:image/jpeg;base64,' + data.frame;
+                })
+                .catch(error => {
+                    showAlert('載入影像失敗: ' + error, 'error');
+                    setTimeout(loadCurrentFrame, 2000);
+                });
+        }
+
+        function handleClick(e) {
+            if (completed) {
+                showAlert('已完成選取，請點擊「儲存配置」或「重置」', 'warning');
+                return;
+            }
+
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+
+            points.push({x, y});
+            updatePointCount();
+            drawFence();
+            
+            console.log(`✓ 已選取點 ${points.length}: (${Math.round(x / scale)}, ${Math.round(y / scale)})`);
+        }
+
+        function handleRightClick(e) {
+            e.preventDefault();
+            completeSelection();
+        }
+
+        function handleMouseMove(e) {
+            if (completed || points.length === 0) return;
+
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+
+            // 重繪
+            ctx.putImageData(imageData, 0, 0);
+            drawFence();
+
+            // 繪製預覽線
+            ctx.strokeStyle = '#ffff00';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(points[points.length - 1].x, points[points.length - 1].y);
+            ctx.lineTo(x, y);
+            ctx.stroke();
+        }
+
+        function drawFence() {
+            if (points.length === 0) return;
+
+            // 繪製點
+            points.forEach((point, i) => {
+                ctx.fillStyle = '#00ff00';
+                ctx.beginPath();
+                ctx.arc(point.x, point.y, 5, 0, Math.PI * 2);
+                ctx.fill();
+
+                // 繪製編號
+                ctx.fillStyle = '#ffffff';
+                ctx.strokeStyle = '#000000';
+                ctx.lineWidth = 3;
+                ctx.font = 'bold 16px Arial';
+                ctx.strokeText(i + 1, point.x + 10, point.y - 10);
+                ctx.fillText(i + 1, point.x + 10, point.y - 10);
+            });
+
+            // 繪製線
+            if (points.length > 1) {
+                ctx.strokeStyle = '#00ff00';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(points[0].x, points[0].y);
+                for (let i = 1; i < points.length; i++) {
+                    ctx.lineTo(points[i].x, points[i].y);
+                }
+                ctx.stroke();
+            }
+
+            // 如果已完成，繪製多邊形
+            if (completed && points.length >= 3) {
+                // 填充
+                ctx.fillStyle = 'rgba(255, 0, 0, 0.2)';
+                ctx.beginPath();
+                ctx.moveTo(points[0].x, points[0].y);
+                for (let i = 1; i < points.length; i++) {
+                    ctx.lineTo(points[i].x, points[i].y);
+                }
+                ctx.closePath();
+                ctx.fill();
+
+                // 邊框
+                ctx.strokeStyle = '#ff0000';
+                ctx.lineWidth = 3;
+                ctx.stroke();
+
+                // 顯示完成標籤
+                ctx.fillStyle = '#00ff00';
+                ctx.strokeStyle = '#000000';
+                ctx.lineWidth = 4;
+                ctx.font = 'bold 24px Arial';
+                ctx.strokeText('✓ COMPLETED', 10, 30);
+                ctx.fillText('✓ COMPLETED', 10, 30);
+            }
+        }
+
+        function resetPoints() {
+            points = [];
+            completed = false;
+            if (imageData) {
+                ctx.putImageData(imageData, 0, 0);
+            }
+            updatePointCount();
+            document.getElementById('saveBtn').disabled = true;
+            hideAlert();
+        }
+
+        function completeSelection() {
+            if (points.length < 3) {
+                showAlert('至少需要 3 個點才能形成圍籬區域', 'warning');
+                return;
+            }
+
+            completed = true;
+            ctx.putImageData(imageData, 0, 0);
+            drawFence();
+            document.getElementById('saveBtn').disabled = false;
+            showAlert(`✓ 圍籬定義完成！共 ${points.length} 個點，請點擊「儲存配置」`, 'success');
+        }
+
+        function saveFence() {
+            if (!completed) {
+                showAlert('請先完成圍籬選取（右鍵點擊完成）', 'warning');
+                return;
+            }
+
+            const fenceId = document.getElementById('fenceId').value.trim();
+            const fenceName = document.getElementById('fenceName').value.trim();
+            const targetClassesStr = document.getElementById('targetClasses').value.trim();
+            const minConfidence = parseFloat(document.getElementById('minConfidence').value);
+
+            if (!fenceId || !fenceName) {
+                showAlert('請填寫圍籬 ID 和名稱', 'error');
+                return;
+            }
+
+            const targetClasses = targetClassesStr ? targetClassesStr.split(',').map(s => s.trim()).filter(s => s) : [];
+
+            // 轉換座標到原始影像尺寸
+            const originalPoints = points.map(p => [
+                Math.round(p.x / scale),
+                Math.round(p.y / scale)
+            ]);
+
+            const fenceData = {
+                id: fenceId,
+                name: fenceName,
+                points: originalPoints,
+                target_classes: targetClasses,
+                min_confidence: minConfidence
+            };
+
+            console.log('儲存圍籬配置:', fenceData);
+
+            // 發送到後端儲存
+            document.getElementById('saveBtn').disabled = true;
+            document.getElementById('saveBtn').textContent = '⏳ 儲存中...';
+
+            fetch('/api/save_fence_config', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(fenceData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showAlert('✓ 配置已儲存！', 'success');
+                    showAlert(data.message + ' 3 秒後自動跳轉...', 'info');
+                    setTimeout(() => {
+                        window.location.href = '/fence';
+                    }, 3000);
+                } else {
+                    showAlert('儲存失敗: ' + data.error, 'error');
+                    document.getElementById('saveBtn').disabled = false;
+                    document.getElementById('saveBtn').textContent = '💾 儲存配置';
+                }
+            })
+            .catch(error => {
+                showAlert('儲存失敗: ' + error, 'error');
+                document.getElementById('saveBtn').disabled = false;
+                document.getElementById('saveBtn').textContent = '💾 儲存配置';
+            });
+        }
+
+        function updatePointCount() {
+            document.getElementById('pointCount').textContent = points.length;
+        }
+
+        function showAlert(message, type) {
+            const alertBox = document.getElementById('alertBox');
+            alertBox.textContent = message;
+            alertBox.className = 'alert alert-' + type;
+            alertBox.style.display = 'block';
+        }
+
+        function hideAlert() {
+            document.getElementById('alertBox').style.display = 'none';
+        }
+
+        // 頁面載入時執行
+        window.onload = function() {
+            loadCurrentFrame();
+        };
+
+        // 每 5 秒重新載入影像（可選）
+        // setInterval(loadCurrentFrame, 5000);
+    </script>
+</body>
+</html>

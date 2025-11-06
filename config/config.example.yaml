@@ -1,0 +1,87 @@
+# 系統配置範本
+# 複製此檔案為 config.yaml 並修改設定
+
+system:
+  name: "License Plate Recognition System"
+  version: "1.0.0"
+  debug: true
+
+yolo:
+  model_path: "yolov8n.pt"
+  confidence_threshold: 0.5
+  device: "cuda:0"  # 或 "cuda:0" 如果有 GPU
+
+cameras:
+  - id: "bd687687-07ef-1bbc-4018-2e6371fe41a0"
+    name: "板橋"
+    rtsp_url: "rtsp://106.104.112.69:554/live1s1.sdp"
+    enabled: true
+    modules: ["license_plate"]
+    process_interval: 2.0
+    
+
+
+database:
+  enabled: true
+  type: "postgresql"
+  host: "localhost"
+  port: 5432
+  database: "surveillance"
+  user: "postgres"
+  password: "${DB_PASSWORD}"  # 從 .env 讀取
+  pool_size: 5
+
+modules:
+  license_plate:
+    enabled: true
+    min_confidence: 0.3
+    ocr_languages: ["en", "ch_tra"]
+    gpu: false
+    multi_zone_search: true
+    
+  face_recognition:
+    enabled: false
+    tolerance: 0.6
+    known_faces_dir: "./known_faces"
+
+# 電子圍籬設定
+virtual_fences:
+  enabled: false  # 是否啟用電子圍籬功能
+  fences:
+    - id: "fence_001"
+      name: "禁止進入區域"
+      # 多邊形頂點座標 (相對於影像尺寸，例如 1920x1080)
+      points:
+        - [300, 200]   # 左上角
+        - [1600, 200]  # 右上角
+        - [1600, 800]  # 右下角
+        - [300, 800]   # 左下角
+      # 要偵測的物件類型，留空表示所有類型
+      target_classes: ["person"]
+      # 最小信心度閾值
+      min_confidence: 0.6
+      # 是否啟用此圍籬
+      enabled: true
+      
+    - id: "fence_002"
+      name: "車輛禁行區"
+      points:
+        - [100, 100]
+        - [500, 100]
+        - [500, 400]
+        - [100, 400]
+      target_classes: ["car", "truck", "bus", "motorcycle"]
+      min_confidence: 0.5
+      enabled: false
+
+performance:
+  enable_monitoring: true
+  enable_caching: false
+  cache_size: 100
+  log_interval: 60  # 秒
+
+logging:
+  level: "INFO"  # DEBUG, INFO, WARNING, ERROR
+  file: "logs/system.log"
+  max_size: 10485760  # 10MB
+  backup_count: 5

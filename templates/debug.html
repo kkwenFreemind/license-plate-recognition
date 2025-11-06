@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebSocket 診斷</title>
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <style>
+        body {
+            font-family: 'Courier New', monospace;
+            background: #1e1e1e;
+            color: #00ff00;
+            padding: 20px;
+        }
+        .log {
+            background: #000;
+            border: 1px solid #00ff00;
+            padding: 20px;
+            margin-bottom: 20px;
+            height: 400px;
+            overflow-y: auto;
+        }
+        .success { color: #00ff00; }
+        .error { color: #ff0000; }
+        .info { color: #00bfff; }
+        .warning { color: #ffaa00; }
+        h1 { color: #00ff00; }
+        button {
+            background: #00ff00;
+            color: #000;
+            border: none;
+            padding: 10px 20px;
+            margin: 5px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔍 WebSocket 連接診斷</h1>
+    
+    <div>
+        <button onclick="testConnection()">🔄 重新連接</button>
+        <button onclick="clearLog()">🗑️ 清除日誌</button>
+        <button onclick="sendTestEvent()">📤 發送測試事件</button>
+    </div>
+    
+    <h2>連接日誌：</h2>
+    <div id="log" class="log"></div>
+    
+    <h2>統計資訊：</h2>
+    <div id="stats" class="log" style="height: 100px;">
+        <p>接收訊息數: <span id="msgCount">0</span></p>
+        <p>連接狀態: <span id="connStatus">未知</span></p>
+        <p>最後訊息時間: <span id="lastMsg">無</span></p>
+    </div>
+
+    <script>
+        let socket = null;
+        let messageCount = 0;
+        
+        function log(message, type = 'info') {
+            const logDiv = document.getElementById('log');
+            const time = new Date().toLocaleTimeString('zh-TW');
+            const entry = document.createElement('div');
+            entry.className = type;
+            entry.textContent = `[${time}] ${message}`;
+            logDiv.appendChild(entry);
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+        
+        function updateStats() {
+            document.getElementById('msgCount').textContent = messageCount;
+            document.getElementById('connStatus').textContent = socket && socket.connected ? '✅ 已連接' : '❌ 未連接';
+            document.getElementById('lastMsg').textContent = new Date().toLocaleTimeString('zh-TW');
+        }
+        
+        function clearLog() {
+            document.getElementById('log').innerHTML = '';
+            messageCount = 0;
+            updateStats();
+        }
+        
+        function testConnection() {
+            log('🔄 嘗試重新連接...', 'warning');
+            if (socket) {
+                socket.disconnect();
+            }
+            initSocket();
+        }
+        
+        function sendTestEvent() {
+            if (socket && socket.connected) {
+                socket.emit('test_event', { message: 'Hello from client!' });
+                log('📤 已發送測試事件', 'info');
+            } else {
+                log('❌ 未連接，無法發送', 'error');
+            }
+        }
+        
+        function initSocket() {
+            log('🚀 初始化 WebSocket 連接...', 'info');
+            log(`📍 目標: ${window.location.protocol}//${window.location.host}/detections`, 'info');
+            
+            socket = io('/detections', {
+                transports: ['websocket', 'polling'],
+                reconnection: true,
+                reconnectionDelay: 1000,
+                reconnectionAttempts: 5
+            });
+            
+            socket.on('connect', function() {
+                log('✅ WebSocket 已連接！', 'success');
+                log(`🆔 Socket ID: ${socket.id}`, 'info');
+                updateStats();
+            });
+            
+            socket.on('disconnect', function(reason) {
+                log(`❌ WebSocket 已斷開: ${reason}`, 'error');
+                updateStats();
+            });
+            
+            socket.on('connect_error', function(error) {
+                log(`❌ 連接錯誤: ${error.message}`, 'error');
+                log(`📋 錯誤詳情: ${JSON.stringify(error)}`, 'error');
+            });
+            
+            socket.on('error', function(error) {
+                log(`❌ Socket 錯誤: ${error}`, 'error');
+            });
+            
+            socket.on('status', function(data) {
+                log(`📡 狀態訊息: ${JSON.stringify(data)}`, 'info');
+            });
+            
+            socket.on('new_detection', function(data) {
+                messageCount++;
+                log(`🎯 收到偵測: ${data.object_class} (${(data.confidence * 100).toFixed(1)}%)`, 'success');
+                log(`📦 完整資料: ${JSON.stringify(data)}`, 'info');
+                updateStats();
+            });
+            
+            // 監聽所有事件
+            socket.onAny((eventName, ...args) => {
+                log(`📨 收到事件: ${eventName}`, 'warning');
+                log(`📦 事件資料: ${JSON.stringify(args)}`, 'info');
+            });
+            
+            // 監聽連接過程
+            socket.io.on('reconnect_attempt', () => {
+                log('🔄 嘗試重新連接...', 'warning');
+            });
+            
+            socket.io.on('reconnect', () => {
+                log('✅ 重新連接成功！', 'success');
+            });
+            
+            socket.io.on('reconnect_error', (error) => {
+                log(`❌ 重新連接失敗: ${error.message}`, 'error');
+            });
+        }
+        
+        // 頁面載入時初始化
+        window.onload = function() {
+            log('🌟 頁面載入完成', 'info');
+            log('📚 Socket.IO 版本: ' + (io.version || '未知'), 'info');
+            initSocket();
+        };
+    </script>
+</body>
+</html>
