@@ -40,7 +40,7 @@ virtual_fences:
   enabled: true
   fences:
   - id: fence_001
-    name: 人員禁入區
+    name: Personnel-restricted area
     points:
     - - 785
       - 453
