@@ -55,6 +55,7 @@ virtual_fences:
     target_classes:
     - person
     min_confidence: 0.6
+    dwell_time_threshold: 3.0  # 新增：停留 3 秒才觸發警報
     enabled: true
 performance:
   enable_monitoring: true

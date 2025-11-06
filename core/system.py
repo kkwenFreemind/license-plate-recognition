@@ -69,13 +69,14 @@ class MultiModalRecognitionSystem:
                 self.logger.error(f"模組註冊失敗 {recognizer.name}: {e}")
             raise
     
-    def process_image(self, image, conf_threshold: float = 0.5) -> List[Dict]:
+    def process_image(self, image, conf_threshold: float = 0.5, track: bool = False) -> List[Dict]:
         """
         處理單張圖片
         
         Args:
             image: 輸入影像
             conf_threshold: YOLO 信心度閾值
+            track: 是否啟用物件追蹤（用於停留時間偵測）
         
         Returns:
             List[Dict]: 辨識結果列表
@@ -86,8 +87,8 @@ class MultiModalRecognitionSystem:
             return []
         
         try:
-            # 1. YOLO 偵測
-            detections = self.base_detector.detect(image, conf_threshold)
+            # 1. YOLO 偵測（支援追蹤）
+            detections = self.base_detector.detect(image, conf_threshold, track=track)
             
             results = []
             

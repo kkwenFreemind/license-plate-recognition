@@ -33,7 +33,8 @@ class BaseDetector:
     
     def detect(self, image: np.ndarray, 
                conf_threshold: float = 0.5, 
-               classes: Optional[List[str]] = None) -> List[Dict]:
+               classes: Optional[List[str]] = None,
+               track: bool = False) -> List[Dict]:
         """
         執行 YOLO 偵測
         
@@ -41,6 +42,7 @@ class BaseDetector:
             image: 輸入影像 (BGR 格式)
             conf_threshold: 信心度閾值
             classes: 要偵測的類別列表 (None = 全部)
+            track: 是否啟用物件追蹤（用於停留時間偵測）
         
         Returns:
             List[Dict]: 偵測結果列表,每個字典包含:
@@ -49,6 +51,7 @@ class BaseDetector:
                 - bbox: [x1, y1, x2, y2]
                 - center: [x, y]
                 - area: 面積
+                - track_id: 追蹤 ID（僅當 track=True 時）
         """
         if image is None or image.size == 0:
             if self.logger:
@@ -56,12 +59,21 @@ class BaseDetector:
             return []
         
         try:
-            results = self.model(image, verbose=False, device=self.device)
+            # 根據 track 參數選擇使用 track 或 predict
+            if track:
+                results = self.model.track(image, persist=True, verbose=False, device=self.device)
+            else:
+                results = self.model(image, verbose=False, device=self.device)
+            
             detections = []
             
             for result in results:
                 boxes = result.boxes
-                for box in boxes:
+                
+                # 檢查是否有追蹤 ID
+                has_tracking = track and boxes.id is not None
+                
+                for i, box in enumerate(boxes):
                     conf = float(box.conf[0])
                     cls = int(box.cls[0])
                     label = self.model.names[cls]
@@ -79,13 +91,20 @@ class BaseDetector:
                     x2 = min(image.shape[1], x2)
                     y2 = min(image.shape[0], y2)
                     
-                    detections.append({
+                    detection = {
                         'class': label,
                         'confidence': float(conf),
                         'bbox': [int(x1), int(y1), int(x2), int(y2)],
                         'center': [(x1 + x2) // 2, (y1 + y2) // 2],
                         'area': (x2 - x1) * (y2 - y1)
-                    })
+                    }
+                    
+                    # 如果有追蹤 ID，加入到結果中
+                    if has_tracking:
+                        track_id = int(boxes.id[i])
+                        detection['track_id'] = track_id
+                    
+                    detections.append(detection)
             
             if self.logger:
                 self.logger.debug(f"偵測到 {len(detections)} 個物件")

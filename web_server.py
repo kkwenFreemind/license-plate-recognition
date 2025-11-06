@@ -139,8 +139,8 @@ def process_camera():
         if current_time - last_process_time >= process_interval:
             logger.debug(f"處理第 {frame_count} 幀...")
             
-            # 執行辨識
-            results = system.process_image(frame, conf_threshold)
+            # 執行辨識（使用追蹤模式以支援停留時間功能）
+            results = system.process_image(frame, conf_threshold, track=True)
             logger.info(f"偵測到 {len(results)} 個物件")
             
             # 繪製框選結果
@@ -185,7 +185,7 @@ def process_camera():
                             'snapshot_base64': snapshot_base64
                         }, namespace='/detections')
             
-            # 繪製電子圍籬
+            # 繪製電子圍籬（會自動顯示停留時間）
             if fence_manager:
                 fence_manager.draw_all_fences(annotated_frame)
             
