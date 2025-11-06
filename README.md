@@ -10,6 +10,8 @@
 ✅ **RTSP 串流處理** - 支援多攝影機同時處理  
 ✅ **非同步架構** - 多執行緒處理，效能優異  
 ✅ **資料庫整合** - PostgreSQL 儲存所有辨識結果  
+✅ **電子圍籬** - 支援虛擬禁區偵測，可設定停留時間閾值  
+✅ **物件追蹤** - 追蹤物件停留時間，避免誤報  
 ✅ **模組化設計** - 易於擴展新功能  
 
 ## 系統架構
@@ -149,6 +151,38 @@ license-plate-recognition/
 ├── logs/                # 日誌
 ├── main.py              # 主程式
 └── requirements.txt
+```
+
+## 電子圍籬功能 🚧
+
+### 停留時間偵測
+
+系統支援虛擬圍籬（電子柵欄），可偵測物件進入禁區，並支援**停留時間閾值**功能：
+
+- ⏱️ **停留時間追蹤**: 自動追蹤同一物件在禁區內的停留時間
+- 🎯 **閾值觸發**: 只有停留達到設定時間（如 3 秒）才觸發警報
+- 👁️ **視覺化回饋**: 顯示即時停留時間和進度條
+- 🎨 **多圍籬支援**: 可設定多個圍籬，各自獨立的時間閾值
+
+```yaml
+# 配置範例
+virtual_fences:
+  fences:
+    - id: "danger_zone"
+      name: "危險區域"
+      points: [[100, 100], [500, 100], [500, 400], [100, 400]]
+      target_classes: ["person"]
+      dwell_time_threshold: 3.0  # 停留 3 秒才觸發
+```
+
+詳細說明請參考：
+- 📖 [停留時間功能指南](docs/document/DWELL_TIME_GUIDE.md)
+- 📖 [虛擬圍籬指南](docs/document/VIRTUAL_FENCE_GUIDE.md)
+- 🎮 [範例程式](examples/dwell_time_example.py)
+
+快速測試：
+```powershell
+python examples/dwell_time_example.py
 ```
 
 ## 擴展功能

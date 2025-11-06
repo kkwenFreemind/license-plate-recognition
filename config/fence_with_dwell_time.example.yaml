@@ -1,0 +1,73 @@
+# 帶停留時間偵測的電子圍籬配置範例
+
+virtual_fences:
+  enabled: true
+  
+  fences:
+    # 範例 1: 倉庫危險區域 - 人員不得停留超過 3 秒
+    - id: "warehouse_danger_zone"
+      name: "倉庫危險區"
+      points:
+        - [200, 150]
+        - [440, 150]
+        - [440, 330]
+        - [200, 330]
+      target_classes:
+        - "person"
+      min_confidence: 0.6
+      dwell_time_threshold: 3.0  # 停留 3 秒觸發警報
+    
+    # 範例 2: 消防通道 - 車輛不得停留超過 5 秒
+    - id: "fire_lane_001"
+      name: "消防通道"
+      points:
+        - [500, 200]
+        - [800, 200]
+        - [800, 450]
+        - [500, 450]
+      target_classes:
+        - "car"
+        - "truck"
+        - "bus"
+      min_confidence: 0.5
+      dwell_time_threshold: 5.0  # 停留 5 秒觸發警報
+    
+    # 範例 3: 即時觸發區域（無停留時間要求）
+    - id: "instant_alert_zone"
+      name: "禁止進入區"
+      points:
+        - [100, 100]
+        - [300, 100]
+        - [300, 250]
+        - [100, 250]
+      target_classes:
+        - "person"
+      min_confidence: 0.7
+      dwell_time_threshold: 0.0  # 0 = 立即觸發（預設行為）
+    
+    # 範例 4: 機器操作區 - 2 秒警告
+    - id: "machine_safety_zone"
+      name: "機器安全區"
+      points:
+        - [600, 100]
+        - [900, 100]
+        - [900, 300]
+        - [600, 300]
+      target_classes:
+        - "person"
+      min_confidence: 0.6
+      dwell_time_threshold: 2.0  # 停留 2 秒觸發警告
+    
+    # 範例 5: 停車區 - 長時間停留監控（10 秒）
+    - id: "parking_zone_001"
+      name: "短暫停車區"
+      points:
+        - [50, 400]
+        - [350, 400]
+        - [350, 600]
+        - [50, 600]
+      target_classes:
+        - "car"
+        - "motorcycle"
+      min_confidence: 0.5
+      dwell_time_threshold: 10.0  # 停留 10 秒觸發
